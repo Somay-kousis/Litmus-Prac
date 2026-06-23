@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Clothing Stylist - Premium Assistant</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Main Style Sheet -->
+    <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+
+    <div class="app-container">
+        <!-- Main Header -->
+        <header class="app-header">
+            <div class="logo-area">
+                <span class="logo-icon">✦</span>
+                <h1>AURA STYLING</h1>
+            </div>
+            <div class="status-indicator">
+                <span class="pulse-dot"></span>
+                <span>Stylist Engine Online</span>
+            </div>
+        </header>
+
+        <!-- Main Layout Grid -->
+        <div class="layout-grid">
+            
+            <!-- Left Side: Catalog, Cart & Suggestions -->
+            <aside class="sidebar">
+                <!-- Recipient Memory Panel -->
+                <section class="panel memory-panel">
+                    <h2>Active Profile Memory</h2>
+                    <div class="recipient-badge">
+                        <span>Shopping For:</span>
+                        <strong id="active-recipient">Self</strong>
+                    </div>
+                    <div class="profile-details" id="recipient-details">
+                        Shopping using items in your current cart.
+                    </div>
+                    <div id="stored-profiles-list" class="stored-profiles-list">
+                        <!-- Stored profiles badges go here -->
+                    </div>
+                </section>
+
+                <!-- Catalog Simulation Panel -->
+                <section class="panel catalog-panel">
+                    <h2>Store Catalog</h2>
+                    <p class="subtitle">Click to add items to your cart</p>
+                    <div class="catalog-items" id="catalog-container">
+                        <!-- Mock Catalog Items loaded dynamically -->
+                    </div>
+                </section>
+
+                <!-- Cart Simulation Panel -->
+                <section class="panel cart-panel">
+                    <div class="panel-header">
+                        <h2>Your Shopping Cart</h2>
+                        <span class="cart-count" id="cart-count-badge">0 items</span>
+                    </div>
+                    <div class="cart-items" id="cart-container">
+                        <div class="empty-cart-msg">Your cart is currently empty.</div>
+                    </div>
+                </section>
+
+                <!-- Daily Suggestions Panel -->
+                <section class="panel suggestions-panel">
+                    <div class="panel-header">
+                        <h2>Personalized Daily Picks</h2>
+                        <button class="btn btn-secondary btn-sm" id="btn-refresh-suggestions">Refresh</button>
+                    </div>
+                    <div class="suggestions-content" id="suggestions-container">
+                        <div class="loading-spinner">Analyzing profile and cart items...</div>
+                    </div>
+                </section>
+            </aside>
+
+            <!-- Right Side: Stylist Chat Console -->
+            <main class="chat-console">
+                <div class="chat-header">
+                    <div class="chat-stylist-info">
+                        <div class="avatar">AI</div>
+                        <div>
+                            <h2>Personal Stylist</h2>
+                            <p class="subtitle">Coordination, styling, sizing advice</p>
+                        </div>
+                    </div>
+                    <div class="guardrail-warning">
+                        <span>Prices & Discounts are Off-Limits</span>
+                    </div>
+                </div>
+
+                <!-- Chat Dialogue Area -->
+                <div class="chat-messages" id="chat-messages-container">
+                    <!-- Greet Message -->
+                    <div class="msg msg-stylist">
+                        <div class="msg-bubble">
+                            Hey, who are we looking for clothes for today?
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Input Bar -->
+                <form class="chat-input-area" id="chat-form">
+                    <input type="text" id="chat-input" placeholder="Ask about styles, sizing, outfit matches..." autocomplete="off">
+                    <button type="submit" class="btn btn-primary">Send</button>
+                </form>
+            </main>
+
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
