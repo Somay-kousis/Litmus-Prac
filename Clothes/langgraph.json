@@ -1,0 +1,9 @@
+{
+  "dependencies": [
+    "."
+  ],
+  "graphs": {
+    "styling_assistant": "./app/graph/builder.py:agent_graph"
+  },
+  "env": ".env"
+}
