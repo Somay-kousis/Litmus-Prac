@@ -1,0 +1,9 @@
+{
+  "dependencies": [
+    "."
+  ],
+  "graphs": {
+    "comparison_agent": "./app/agent.py:agent_graph"
+  },
+  "env": "../.env"
+}
