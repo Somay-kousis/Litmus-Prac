@@ -30,3 +30,4 @@ backend/venv/
 __pycache__/
 *.pyc
 .langgraph_api/
+.env
