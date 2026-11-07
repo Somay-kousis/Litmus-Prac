@@ -1,68 +1,48 @@
-# DriveMatrix — Specs & Comparison Deck with AI Implications Agent
+# DriveMatrix
 
-DriveMatrix is a premium car specifications database and comparison platform (inspired by CarDekho) integrated with a backend **LangGraph AI Agent** that translates dry, numeric specifications (like horsepower, torque, drivetrain, and battery capacity) into clear, real-world driving implications (overtaking speed, slippery weather grip, cabin utility, and road comfort).
+A car spec browser with a LangGraph agent that explains what the numbers mean on the road: what torque does for overtaking, what AWD does in the wet, what a battery size means for range. Practice build, modelled loosely on CarDekho.
 
----
+Two parts that are not connected yet:
 
-## 📁 Project Structure
+- **Frontend** (React + Vite): browse, filter and compare 10 cars from `src/data/cars.ts`. The compare view marks the best value in each row (lowest price, most horsepower and so on).
+- **Backend** (FastAPI + LangGraph): takes a list of cars and either writes a comparison or answers a question about them, then pauses for a human to approve or ask for a revision.
 
-```
-Litmus-Prac/Cars/
-├── backend/
-│   ├── app/
-│   │   ├── data/
-│   │   │   └── rag_docs/           # Downloaded RAG text sheets
-│   │   ├── __init__.py
-│   │   ├── agent.py               # LangGraph state graph & routing logic
-│   │   ├── main.py                # FastAPI endpoints (Start & Review routes)
-│   │   ├── rag.py                 # Simple local RAG TF-IDF retriever
-│   │   └── schemas.py             # Pydantic state & request schemas
-│   ├── requirements.txt           # Python dependencies
-│   ├── run.py                     # FastAPI server startup script
-│   └── verify_agent.py            # Local agent verification test harness
-├── src/
-│   ├── assets/                    # Icons and UI graphics
-│   ├── components/
-│   │   ├── CarCard.tsx            # Glassmorphic grid card
-│   │   ├── CarDetails.tsx         # Detailed overlay specs tab
-│   │   ├── CompareDrawer.tsx      # Bottom sticky tray
-│   │   ├── CompareModal.tsx       # Side-by-side spec winner matrices
-│   │   └── FilterBar.tsx          # Dynamic search & ranges slider
-│   ├── data/
-│   │   └── cars.ts                # Main local mock car specifications dataset
-│   ├── App.css                    # Component layout styles
-│   ├── App.tsx                    # Main client dashboard view
-│   ├── index.css                  # Design system variables & base CSS
-│   └── main.tsx
-├── .env.template                  # Environment template config
-├── package.json                   # Vite dependencies
-└── tsconfig.json
+## How the agent works
+
+```mermaid
+graph TD
+    Start([request]) --> Validate[validate_input]
+    Validate -- automatic --> Auto[generate_auto_comparison]
+    Validate -- manual --> Manual[generate_manual_comparison]
+    Auto --> Review{human_review<br/>graph pauses here}
+    Manual --> Review
+    Review -- approved --> Final[finalize_response]
+    Review -- feedback --> Revise[revise_comparison]
+    Revise --> Review
+    Final --> End([response])
 ```
 
----
+- **Automatic mode** writes a comparison of the selected cars' specs.
+- **Manual mode** takes a question. `llama-3.3-70b-versatile` extracts the intent as structured output, a TF-IDF search pulls the 2 closest passages from three local docs in `backend/app/data/rag_docs/` (drivetrains, EV charging, horsepower vs torque), and `llama-3.1-8b-instant` writes the answer.
+- **Human review.** The graph stops before `human_review`. `POST /compare/review` with the `thread_id` approves the draft or sends feedback. A revised draft counts as approved, so there is at most one revision.
+- **Memory.** Chat history keeps the last 50 messages. Older ones are folded into a running `summary` string, 80 characters each.
 
-## ⚡ Setup Guide
+The two Groq models are split to stay under free-tier rate limits: the 70B model only for the structured intent call, the 8B model for everything else.
 
-### 1. Backend Server Setup (Python)
+## Run it
 
-Ensure Python 3.14+ is installed.
+Backend, from `Cars/backend`:
 
 ```bash
-# Navigate to the backend directory
-cd Cars/backend
-
-# Create a virtual environment
 python3 -m venv venv
-
-# Activate the virtual environment
 source venv/bin/activate
-
-# Install all backend packages (including local api dependencies)
 pip install -r requirements.txt
-pip install -U "langgraph-cli[inmem]"
+pip install scikit-learn                 # needed by app/rag.py, missing from requirements.txt
+pip install -U "langgraph-cli[inmem]"    # only for option B
 ```
 
-Configure your API keys in `Cars/.env` (parent directory of backend):
+Put your keys in `Cars/.env`. The file in the repo is a template and is **not** gitignored, so don't commit your real key.
+
 ```env
 GROQ_API_KEY=your_groq_api_key
 LANGCHAIN_TRACING_V2=true
@@ -70,107 +50,24 @@ LANGCHAIN_API_KEY=your_langsmith_api_key
 LANGCHAIN_PROJECT=drive-matrix
 ```
 
-Start the servers:
-* **Option A: FastAPI Endpoints Server (Port 8000)**
-  ```bash
-  python run.py
-  ```
-* **Option B: LangGraph Dev Server (Port 2024)**
-  ```bash
-  langgraph dev --tunnel
-  ```
-* **Option C: Run Local Verification Unit Tests**
-  ```bash
-  python verify_agent.py
-  ```
-
----
-
-### 2. Frontend Client Setup (Vite + React)
+Then one of:
 
 ```bash
-# Navigate back to Cars root
-cd Cars
+python run.py              # A: FastAPI on http://127.0.0.1:8000  (POST /compare/start, /compare/review)
+langgraph dev --tunnel     # B: LangGraph dev server on port 2024
+python verify_agent.py     # C: runs the graph end to end on sample cars (calls Groq)
+```
 
-# Install packages
+Frontend, from `Cars`:
+
+```bash
 npm install
-
-# Run the development server
-npm run dev
-```
-Open [http://localhost:5173/](http://localhost:5173/) in your browser.
-
----
-
-## 🧠 AI Agent Architecture
-
-The backend agent is orchestrated using **LangGraph** to process automatic comparison summaries and manual natural language queries:
-
-```mermaid
-graph TD
-    Start([Start]) --> Input[Receive User Input]
-
-    Input --> RouteMode{Input Type?}
-
-    RouteMode -- Compare Button --> AutoFlow[Automatic Comparison Flow]
-    RouteMode -- Chat Query --> ManualFlow[Manual Query Flow]
-
-    AutoFlow --> FetchData[Fetch Car Specifications]
-    ManualFlow --> FetchData
-
-    FetchData --> LLMAnalysis[LLM Real-World Analysis]
-
-    LLMAnalysis --> Response[Generate User-Friendly Response]
-
-    Response --> FollowUp{User Follow-up?}
-
-    FollowUp -- Yes --> Input
-    FollowUp -- No --> End([End])
-
-    classDef startEnd fill:#0a0e17,stroke:#00f2fe,stroke-width:2px,color:#ffffff;
-    classDef nodeStyle fill:#101625,stroke:#444444,stroke-width:1px,color:#ffffff;
-    classDef routeStyle fill:#1a243c,stroke:#ffb300,stroke-width:1px,color:#ffffff;
-
-    class Start,End startEnd;
-    class Input,FetchData,LLMAnalysis,Response nodeStyle;
-    class RouteMode,FollowUp routeStyle;
+npm run dev                # http://localhost:5173
 ```
 
-### LangGraph State Memory
-The agent implements a **sliding-window memory compression** algorithm:
-- Keeps up to **50 active exchanges** in `chat_history`.
-- When total count exceeds 50, the oldest message index is popped and folded into a persistent `summary` string: `S_t = (S_{t-1} + Message_old)`. This maintains sliding history while preserving context.
+## Limitations
 
----
-
-## 🎯 Groq Model Choice & Free-Tier Optimization
-
-To accommodate **Groq free-tier rate limits**, we run a dual-tier model configuration:
-1. **llama-3.3-70b-versatile**: Used **ONLY** for structured JSON output calls (via `.with_structured_output(...)` to extract user query intent). This leverages high reasoning power for intent identification without wasting rate limits on verbose text.
-2. **llama-3.1-8b-instant**: Used for general string generation (generating the comparison reports and revision cycles). This model is lightning-fast, highly contextual, and has generous free-tier caps.
-
----
-
-## 📈 Competitive Advantage vs Traditional Apps
-
-Traditional sites like *CarDekho* or *CarWale* show tabular grids of numbers that confuse everyday consumers. DriveMatrix provides:
-- **Intelligent Spec Synthesis**: Tells you *why* torque matters for overtaking on a wet road.
-- **Winner Highlighting**: Evaluates which car holds the best specs (power, quickness, value) under actual metrics.
-- **Local RAG Integration**: Indexes real mechanical concepts and charger network documents locally using a TF-IDF vector database, preventing LLM hallucination of capabilities.
-
----
-
-## 📋 Project Backlogs & Limitations
-
-- [ ] **No LLM Evals**: Needs an evaluation suite (such as *Ragas* or *TruLens*) to verify accuracy of spec-implications mapping over test datasets.
-- [ ] **Basic RAG**: Relies on a local TF-IDF model instead of advanced dense embeddings.
-- [ ] **Deployment**: Lacks cloud staging infrastructure (Docker/Kubernetes).
-- [ ] **Visual Mock Variations**: Does not have generation of manual car modifications (which are popular among enthusiast buyers but missing in traditional car catalogs).
-
----
-
-## 🚀 Future Roadmap (With More Time)
-
-1. **Advanced RAG (C-RAG / Self-RAG)**: Introduce Corrective/Self-Retrieval to automatically query search APIs if local RAG documents lack specific vehicle specs.
-2. **Neo4j Graph Database**: Map user comparison queries in a graph database to identify cross-brand competition graphs (e.g. mapping that users looking at Porsche Taycan also compare Tesla Model S 80% of the time).
-3. **Prompt Compilation (DSPy)**: Use DSPy to declaratively optimize prompt weights based on metric evaluations instead of manual editing.
+- The frontend does not call the backend. The agent is only reachable through the API, LangGraph Studio or `verify_agent.py`.
+- No evals. Nothing checks whether the "what this means on the road" text is correct.
+- Retrieval is TF-IDF over three short documents.
+- Car data is a hand-written list of 10 cars.
